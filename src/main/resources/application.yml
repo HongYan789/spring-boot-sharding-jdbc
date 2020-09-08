@@ -1,0 +1,82 @@
+
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: com.hongyan.study.shardingjdbc.entity
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: spring-boot-sharding-jdbc
+  # 数据源
+  shardingsphere:
+    datasource:
+      names: master0,master1,slave0,slave1
+      #数据库db
+      master0:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://127.0.0.1:3306/user_0?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false
+        username: root
+        password: 123456
+      master1:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://127.0.0.1:3306/user_1?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false
+        username: root
+        password: 123456
+      slave0:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://127.0.0.1:3307/user_0?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false
+        username: root
+        password: 123456
+      slave1:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://127.0.0.1:3307/user_1?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false
+        username: root
+        password: 123456
+    sharding:
+#      default-database-strategy:
+#        inline:
+#          sharding-column: user_id
+#          algorithm-expression: master$->{user_id % 2}
+      tables:
+        user_info: #user_info表
+          key-generator-column-name: user_id #主键
+          actual-data-nodes: master$->{0..1}.user_info_$->{0..1}    #数据节点,均匀分布
+          database-strategy:   #分库策略
+            inline: #行表达式
+              sharding-column: user_id        #列名称，多个列以逗号分隔
+              algorithm-expression: master$->{user_id % 2}    #按模运算分配
+          table-strategy:  #分表策略
+            inline: #行表达式
+              sharding-column: user_id
+              algorithm-expression: user_info_$->{user_id % 2}
+        t_order_item: #order_info表
+          key-generator-column-name: order_id #主键
+          actual-data-nodes: master$->{0..1}.t_order_item_$->{0..1}    #数据节点,均匀分布
+          database-strategy:   #分库策略
+            inline: #行表达式
+              sharding-column: order_id        #列名称，多个列以逗号分隔
+              algorithm-expression: master$->{order_id % 2}    #按模运算分配
+          table-strategy:  #分表策略
+            inline: #行表达式
+              sharding-column: order_id
+              algorithm-expression: t_order_item_$->{order_id % 2}
+#      masterslave: #读写分离
+#        load-balance-algorithm-type: round_robin
+#        name: ms
+      master-slave-rules: #这里配置读写分离的时候一定要记得添加主库的数据源名称 这里为master0
+        master0: #指定master0为主库，slave0为它的从库
+          master-data-source-name: master0
+          slave-data-source-names: slave0
+        master1: #指定master1为主库，slave1为它的从库
+          master-data-source-name: master1
+          slave-data-source-names: slave1
+    props:
+      sql: #打印sql
+        show: true
+
